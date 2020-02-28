@@ -124,6 +124,21 @@ public class MusicManager implements OnAudioFocusChangeListener {
         return playback;
     }
 
+    public void switchSpeakerOn() {
+        AudioManager manager = (AudioManager) service.getSystemService(Context.AUDIO_SERVICE);
+        manager.setSpeakerphoneOn(true);
+        manager.setMode(AudioManager.MODE_NORMAL);
+        metadata.getSession().setPlaybackToLocal(AudioManager.STREAM_MUSIC);
+
+    }
+
+    public void switchSpeakerOff() {
+        AudioManager manager = (AudioManager) service.getSystemService(Context.AUDIO_SERVICE);
+        manager.setSpeakerphoneOn(false);
+        manager.setMode(AudioManager.MODE_IN_CALL);
+        metadata.getSession().setPlaybackToLocal(AudioManager.STREAM_VOICE_CALL);
+    }
+
     public boolean shouldStopWithApp() {
         return stopWithApp;
     }
@@ -200,11 +215,55 @@ public class MusicManager implements OnAudioFocusChangeListener {
             if(!Utils.isLocal(track.uri)) {
                 if(!wifiLock.isHeld()) wifiLock.acquire();
             }
+
         }
+        else {
+            AudioManager manager = (AudioManager) service.getSystemService(Context.AUDIO_SERVICE);
+            manager.setSpeakerphoneOn(true);
+            manager.setMode(AudioManager.MODE_NORMAL);
+            metadata.getSession().setPlaybackToLocal(AudioManager.STREAM_MUSIC);
+        }
+
+        metadata.setActive(true);
 
         if (playback.shouldAutoUpdateMetadata())
             metadata.setActive(true);
     }
+
+
+    @SuppressLint("WakelockTimeout")
+    public void onPlayWithEarPiece() {
+        Log.d(Utils.LOG, "onPlayWithEarPiece");
+        if (playback == null)
+            return;
+
+        Track track = playback.getCurrentTrack();
+        if (track == null)
+            return;
+
+        if (!playback.isRemote()) {
+            requestFocusEarPiece();
+
+            if (!receivingNoisyEvents) {
+                service.registerReceiver(noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+                receivingNoisyEvents = true;
+            }
+
+            if (!wakeLock.isHeld())
+                wakeLock.acquire();
+
+            if (!Utils.isLocal(track.uri)) {
+                if (!wifiLock.isHeld())
+                    wifiLock.acquire();
+            }
+        } else {
+            AudioManager manager = (AudioManager) service.getSystemService(Context.AUDIO_SERVICE);
+            manager.setSpeakerphoneOn(false);
+            manager.setMode(AudioManager.MODE_IN_CALL);
+            metadata.getSession().setPlaybackToLocal(AudioManager.STREAM_VOICE_CALL);
+        }	       }
+        metadata.setActive(true);
+    }	    
 
     public void onPause() {
         Log.d(Utils.LOG, "onPause");
@@ -348,6 +407,8 @@ public class MusicManager implements OnAudioFocusChangeListener {
 
         AudioManager manager = (AudioManager)service.getSystemService(Context.AUDIO_SERVICE);
         int r;
+        manager.setSpeakerphoneOn(true);
+        manager.setMode(AudioManager.MODE_NORMAL);
 
         if(manager == null) {
             r = AudioManager.AUDIOFOCUS_REQUEST_FAILED;
@@ -365,6 +426,35 @@ public class MusicManager implements OnAudioFocusChangeListener {
         } else {
             //noinspection deprecation
             r = manager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        }
+
+        hasAudioFocus = r == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+    }
+
+    private void requestFocusEarPiece() {
+        if (hasAudioFocus)
+            return;
+        Log.d(Utils.LOG, "Requesting audio focus with ear piece...");
+
+        AudioManager manager = (AudioManager) service.getSystemService(Context.AUDIO_SERVICE);
+        int r;
+
+        manager.setSpeakerphoneOn(false);
+        manager.setMode(AudioManager.MODE_IN_CALL);
+        if (manager == null) {
+            r = AudioManager.AUDIOFOCUS_REQUEST_FAILED;
+        } else if (Build.VERSION.SDK_INT >= 26) {
+            focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setOnAudioFocusChangeListener(this)
+                    .setAudioAttributes(
+                            new AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                                    .setLegacyStreamType(AudioManager.STREAM_VOICE_CALL).build())
+                    .setWillPauseWhenDucked(alwaysPauseOnInterruption).build();
+
+            r = manager.requestAudioFocus(focus);
+        } else {
+            // noinspection deprecation
+            r = manager.requestAudioFocus(this, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
         }
 
         hasAudioFocus = r == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
