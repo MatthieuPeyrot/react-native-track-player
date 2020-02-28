@@ -9,6 +9,11 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter;
 
+
+import android.media.AudioManager;
+import android.bluetooth.BluetoothHeadset;
+import com.guichaguri.trackplayer.service.Utils;
+
 /**
  * @author Guichaguri
  */
@@ -28,6 +33,12 @@ public class MusicEvents extends BroadcastReceiver {
     public static final String BUTTON_JUMP_FORWARD = "remote-jump-forward";
     public static final String BUTTON_JUMP_BACKWARD = "remote-jump-backward";
     public static final String BUTTON_DUCK = "remote-duck";
+
+    // Audio Events
+    public static final String HEADSET_PLUGGED_IN = "headset-plugged-in";
+    public static final String HEADSET_PLUGGED_OUT = "headset-plugged-out";
+    public static final String BLUETOOTH_CONNECTED = "bluetooth-connected";
+    public static final String BLUETOOTH_DISCONNECTED = "bluetooth-disconnected";
 
     // Playback Events
     public static final String PLAYBACK_STATE = "playback-state";

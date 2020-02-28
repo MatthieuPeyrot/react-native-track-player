@@ -33,6 +33,9 @@ import com.guichaguri.trackplayer.service.player.LocalPlayback;
 
 import static com.google.android.exoplayer2.DefaultLoadControl.*;
 
+import android.media.AudioManager;
+import android.bluetooth.BluetoothHeadset;
+
 /**
  * @author Guichaguri
  */
@@ -54,10 +57,42 @@ public class MusicManager implements OnAudioFocusChangeListener {
     private BroadcastReceiver noisyReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            String event = intent.getStringExtra("event");
             service.emit(MusicEvents.BUTTON_PAUSE, null);
         }
     };
+
+    private BroadcastReceiver headsetReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            Bundle bundle = new Bundle();
+
+            if (action == "android.intent.action.HEADSET_PLUG") {
+                if (intent.getIntExtra("state", -1) == 0)
+                    service.emit(MusicEvents.HEADSET_PLUGGED_OUT, bundle);
+                else
+                    service.emit(MusicEvents.HEADSET_PLUGGED_IN, bundle);
+
+            }
+            if (BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
+                int bluetoothHeadsetState = intent.getIntExtra(BluetoothHeadset.EXTRA_STATE,
+                        BluetoothHeadset.STATE_DISCONNECTED);
+                // Device found
+                if (bluetoothHeadsetState == BluetoothHeadset.STATE_CONNECTED) {
+                    service.emit(MusicEvents.BLUETOOTH_CONNECTED, bundle);
+                }
+                if (bluetoothHeadsetState == BluetoothHeadset.STATE_DISCONNECTED) {
+                    service.emit(MusicEvents.BLUETOOTH_DISCONNECTED, bundle);
+                }
+            }
+
+        }
+    };
+
     private boolean receivingNoisyEvents = false;
+    private boolean receivingHeadsetEvents = false;
 
     private boolean stopWithApp = false;
     private boolean alwaysPauseOnInterruption = false;
@@ -67,7 +102,15 @@ public class MusicManager implements OnAudioFocusChangeListener {
         this.service = service;
         this.metadata = new MetadataManager(service, this);
 
-        PowerManager powerManager = (PowerManager)service.getSystemService(Context.POWER_SERVICE);
+        if (!receivingHeadsetEvents) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(AudioManager.ACTION_HEADSET_PLUG);
+            filter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+            this.service.registerReceiver(headsetReceiver, filter);
+            receivingHeadsetEvents = true;
+        }
+
+        PowerManager powerManager = (PowerManager) service.getSystemService(Context.POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "track-player-wake-lock");
         wakeLock.setReferenceCounted(false);
 

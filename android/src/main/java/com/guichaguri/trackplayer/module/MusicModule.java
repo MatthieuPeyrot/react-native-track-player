@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.support.v4.media.RatingCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.facebook.react.bridge.*;
 import com.google.android.exoplayer2.C;
@@ -18,6 +19,9 @@ import com.guichaguri.trackplayer.service.Utils;
 import com.guichaguri.trackplayer.service.models.NowPlayingMetadata;
 import com.guichaguri.trackplayer.service.models.Track;
 import com.guichaguri.trackplayer.service.player.ExoPlayback;
+
+import android.media.AudioManager;
+import android.bluetooth.BluetoothHeadset;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,8 +53,13 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
         ReactContext context = getReactApplicationContext();
         LocalBroadcastManager manager = LocalBroadcastManager.getInstance(context);
 
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(AudioManager.ACTION_HEADSET_PLUG);
+        filter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+        filter.addAction(Utils.EVENT_INTENT);
+
         eventHandler = new MusicEvents(context);
-        manager.registerReceiver(eventHandler, new IntentFilter(Utils.EVENT_INTENT));
+        manager.registerReceiver(eventHandler, new IntentFilter(filter));
     }
 
     @Override

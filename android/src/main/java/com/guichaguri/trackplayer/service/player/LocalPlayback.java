@@ -7,6 +7,7 @@ import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.audio.AudioAttributes;
 import com.google.android.exoplayer2.database.DatabaseProvider;
 import com.google.android.exoplayer2.database.ExoDatabaseProvider;
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource;
@@ -24,6 +25,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import android.media.AudioManager;
+import android.bluetooth.BluetoothHeadset;
 
 /**
  * @author Guichaguri
@@ -152,8 +156,21 @@ public class LocalPlayback extends ExoPlayback<SimpleExoPlayer> {
 
     @Override
     public void play() {
+        manager.switchSpeakerOn();
+        player.setAudioAttributes(
+                new AudioAttributes.Builder().setContentType(C.CONTENT_TYPE_MUSIC).setUsage(C.USAGE_MEDIA).build(),
+                false);
         prepare();
         super.play();
+    }
+
+    @Override
+    public void playWithEarPiece() {
+        manager.switchSpeakerOff();
+        player.setAudioAttributes(new AudioAttributes.Builder().setContentType(C.CONTENT_TYPE_SPEECH)
+                .setUsage(C.USAGE_VOICE_COMMUNICATION).build(), false);
+        prepare();
+        super.playWithEarPiece();
     }
 
     @Override
