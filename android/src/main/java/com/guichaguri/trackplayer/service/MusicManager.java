@@ -261,7 +261,7 @@ public class MusicManager implements OnAudioFocusChangeListener {
             manager.setSpeakerphoneOn(false);
             manager.setMode(AudioManager.MODE_IN_CALL);
             metadata.getSession().setPlaybackToLocal(AudioManager.STREAM_VOICE_CALL);
-        }	       }
+        }	       
         metadata.setActive(true);
     }	    
 
@@ -501,4 +501,4 @@ public class MusicManager implements OnAudioFocusChangeListener {
         if(wifiLock.isHeld()) wifiLock.release();
         if(wakeLock.isHeld()) wakeLock.release();
     }
-}
+
